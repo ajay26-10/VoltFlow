@@ -1,0 +1,194 @@
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: OrdererMSP
+    MSPDir: ../organizations/ordererOrganizations/energy.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+    OrdererEndpoints:
+      - orderer.energy.com:7050
+  - &Producer
+    Name: ProducerMSP
+    ID: ProducerMSP
+    MSPDir: ../organizations/peerOrganizations/producer.energy.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('ProducerMSP.admin', 'ProducerMSP.peer', 'ProducerMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('ProducerMSP.admin', 'ProducerMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('ProducerMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('ProducerMSP.peer')"
+  - &Consumer
+    Name: ConsumerMSP
+    ID: ConsumerMSP
+    MSPDir: ../organizations/peerOrganizations/consumer.energy.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('ConsumerMSP.admin', 'ConsumerMSP.peer', 'ConsumerMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('ConsumerMSP.admin', 'ConsumerMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('ConsumerMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('ConsumerMSP.peer')"
+  - &Regulator
+    Name: RegulatorMSP
+    ID: RegulatorMSP
+    MSPDir: ../organizations/peerOrganizations/regulator.energy.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.admin', 'RegulatorMSP.peer', 'RegulatorMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.admin', 'RegulatorMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.peer')"
+  - &Storage
+    Name: StorageMSP
+    ID: StorageMSP
+    MSPDir: ../organizations/peerOrganizations/storage.energy.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('StorageMSP.admin', 'StorageMSP.peer', 'StorageMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('StorageMSP.admin', 'StorageMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('StorageMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('StorageMSP.peer')"
+  - &Finance
+    Name: FinanceMSP
+    ID: FinanceMSP
+    MSPDir: ../organizations/peerOrganizations/finance.energy.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('FinanceMSP.admin', 'FinanceMSP.peer', 'FinanceMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('FinanceMSP.admin', 'FinanceMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('FinanceMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('FinanceMSP.peer')"
+
+Capabilities:  
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_5: true
+    
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  Addresses:
+    - orderer.energy.com:7050
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+    - *OrdererOrg
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  ChannelUsingRaft:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      OrdererType: etcdraft
+      EtcdRaft:
+        Consenters:
+          - Host: orderer.energy.com
+            Port: 7050
+            ClientTLSCert: ../organizations/ordererOrganizations/energy.com/orderers/orderer.energy.com/tls/server.crt
+            ServerTLSCert: ../organizations/ordererOrganizations/energy.com/orderers/orderer.energy.com/tls/server.crt
+      Organizations:
+        - *OrdererOrg
+      Capabilities: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *Producer
+        - *Consumer
+        - *Regulator
+        - *Storage
+        - *Finance
+      Capabilities: *ApplicationCapabilities
